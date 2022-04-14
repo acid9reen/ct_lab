@@ -2,13 +2,10 @@
 from functools import partial
 
 import numpy as np
-import sympy as sym
 from matplotlib import pyplot as plt
-from scipy import integrate
 
 import pend
-from utils import (_create_char_pol, create_control_mat, create_theta,
-                   gen_plot, init_solve_system)
+from utils import create_control_mat, create_theta, gen_plot, init_solve_system
 
 # %% [markdown]
 # # Выполнение заданий
