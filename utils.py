@@ -65,13 +65,15 @@ def gen_plot(
         time: np.ndarray,
         sol_linear: np.ndarray,
         sol_nonlinear: np.ndarray,
+        title: str,
         size: tuple[float, float] = (10, 15),
-        dpi: int = 300,
+        dpi: int = 96,
 ):
     y_labels = (r"$x$", r"$\varphi$", r"$\dot x$", r"$\dot \varphi$")
 
     fig, axs = plt.subplots(4, 1, sharex=True)
     fig.set_size_inches(*size)
+    fig.suptitle(title)
     fig.set_dpi(dpi)
 
     for i in range(4):
