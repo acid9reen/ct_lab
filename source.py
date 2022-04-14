@@ -53,10 +53,29 @@ print(atos(np.linalg.eigvals(pend.A + pend.b @ theta_real)))
 print(atos(np.linalg.eigvals(pend.A + pend.b @ theta_complex)))
 # %%
 solver, time = init_solve_system(np.array([0, 0.1, 0, 0]), stop=5)
+# %% [markdown]
+# ### Naive $\theta$
+# %%
+sol_nonlinear = solver(pend.nonlinear_system, theta_naive)
+sol_linear = solver(pend.linear_system, pend.A, pend.b, theta_naive)
+
+fig = gen_plot(time, sol_linear, sol_nonlinear, r"Naive $\theta$")
+plt.show()
+# %% [markdown]
+# ### Real $\theta$
+# %%
 sol_nonlinear = solver(pend.nonlinear_system, theta_real)
 sol_linear = solver(pend.linear_system, pend.A, pend.b, theta_real)
 
-fig = gen_plot(time, sol_linear, sol_nonlinear)
+fig = gen_plot(time, sol_linear, sol_nonlinear, r"Real $\theta$")
+plt.show()
+# %% [markdown]
+# ### Complex $\theta$
+# %%
+sol_nonlinear = solver(pend.nonlinear_system, theta_complex)
+sol_linear = solver(pend.linear_system, pend.A, pend.b, theta_complex)
+
+fig = gen_plot(time, sol_linear, sol_nonlinear, r"Complex $\theta$")
 plt.show()
 # %% [markdown]
 # ## Синтез наблюдателя
