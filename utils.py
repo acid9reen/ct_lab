@@ -1,8 +1,9 @@
 from functools import reduce
-from operator import matmul
+from operator import matmul, mul
 from typing import Any, Callable
 
 import numpy as np
+import sympy as sym
 from matplotlib import pyplot as plt
 from scipy.integrate import solve_ivp
 
@@ -63,8 +64,7 @@ def init_solve_system(
 
 def gen_plot(
         time: np.ndarray,
-        sol_linear: np.ndarray,
-        sol_nonlinear: np.ndarray,
+        label_and_xs: list[tuple[str, np.ndarray]],
         title: str,
         size: tuple[float, float] = (10, 15),
         dpi: int = 96,
@@ -77,8 +77,9 @@ def gen_plot(
     fig.set_dpi(dpi)
 
     for i in range(4):
-        axs[i].plot(time, sol_linear[i], label="linear")
-        axs[i].plot(time, sol_nonlinear[i], label="nonlinear")
+        for label, xs in label_and_xs:
+            axs[i].plot(time, xs[i], label=label)
+
         axs[i].set_xlabel("time")
         axs[i].set_ylabel(y_labels[i])
         axs[i].grid(True)
@@ -87,3 +88,25 @@ def gen_plot(
     fig.tight_layout()
 
     return fig
+
+
+def round_expr_fac(num_digits):
+    def _round_expr(array: np.ndarray):
+        expr = sym.Matrix(array)
+        return expr.xreplace({n : round(n, num_digits) for n in expr.atoms(sym.Number)})
+    return _round_expr
+
+
+def find_theta(
+        A: np.ndarray,
+        wanted_eigvals: tuple[complex, complex],
+        th_1: sym.Symbol,
+        th_2: sym.Symbol,
+) -> np.ndarray:
+    c = reduce(mul, wanted_eigvals)
+    b = sum(wanted_eigvals)
+    f_1 = -A[0][1].subs([(th_2, 1)]) * th_1 - th_2 - A[0][0].subs([(th_1, 0)]) + b
+    f_2 = A[0][0].subs([(th_1, 0)]) * th_2 - c
+    sol = sym.nsolve((f_1, f_2), (th_1, th_2), (0, 0))
+
+    return sol

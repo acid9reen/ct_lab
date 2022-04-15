@@ -2,34 +2,42 @@
 from functools import partial
 
 import numpy as np
+import scipy as sp
 import sympy as sym
 from matplotlib import pyplot as plt
-from scipy import integrate
 
 import pend
-from utils import (_create_char_pol, create_control_mat, create_theta,
-                   gen_plot, init_solve_system)
+from utils import (create_control_mat, create_theta, find_theta, gen_plot,
+                   init_solve_system, round_expr_fac)
 
 # %% [markdown]
-# # Выполнение заданий
+#  # Выполнение заданий
+
+# %%
+sym.init_printing()
+
 # %%
 # Array to string
 atos = partial(np.array_str, precision=3, suppress_small=True)
+pprint = round_expr_fac(3)
+
 # %% [markdown]
-# ## Ситнез регулятора
+#  ## Ситнез регулятора
+
 # %%
-print(atos(pend.A))
+pprint(pend.A)
+
 # %%
 C = create_control_mat(pend.A, pend.b)
 
-print(f"C = \n{atos(C)}")
-print(f"Shape: {C.shape}")
-print(f"Rank: {np.linalg.matrix_rank(C)}")
-# %%
-print(f"Eigs: {atos(np.linalg.eigvals(pend.A))}")
+print(f"C with shape {C.shape} and rank {np.linalg.matrix_rank(C)} = ")
+pprint(C)
 
+# %%
 eigs = np.linalg.eigvals(pend.A)
-eigs = list(map(float, eigs))
+print("A eigvals = ")
+pprint(eigs)
+
 # %%
 # перенесём 6.597 в устойчивое -6.597
 theta_naive = create_theta(pend.A, C, eigs[0], -eigs[1], eigs[2], eigs[3])
@@ -38,209 +46,196 @@ print(f"При переносе СЧ (6.597) в действительное (-6
 # перенесём 0 и 6.597 в устойчивые -2.069 и -6.597
 theta_real = create_theta(pend.A, C, -2.069, -eigs[1], eigs[2], eigs[3])
 
-print(f"При переносе СЧ (0, 6.597) в действительные (-2.069, -6.597): theta = {theta_real}")
+print(
+    f"При переносе СЧ (0, 6.597) в действительные (-2.069, -6.597): theta = {theta_real}"
+)
 
 # Перенесём СЧ 0 и 6.597 в пару комплексно сопряженных чисел -1-i, -1+i
-theta_complex = create_theta(pend.A, C, complex(-1, -1), complex(-1, 1), eigs[2], eigs[3])
+theta_complex = create_theta(
+    pend.A, C, complex(-1, -1), complex(-1, 1), eigs[2], eigs[3]
+)
 
-print(f"При переносе СЧ (0, 6.597) пару комплексно сопряженных чисел (-1-i, -1+i): theta = {theta_complex}")
+print(
+    f"При переносе СЧ (0, 6.597) пару комплексно сопряженных чисел (-1-i, -1+i): theta = {theta_complex}"
+)
+
 # %%
 print("Проверка СЧ полкченных после пременения управления:\n")
-
 print(atos(np.linalg.eigvals(pend.A + pend.b @ theta_naive)))
-
 print(atos(np.linalg.eigvals(pend.A + pend.b @ theta_real)))
 print(atos(np.linalg.eigvals(pend.A + pend.b @ theta_complex)))
+
 # %%
 solver, time = init_solve_system(np.array([0, 0.1, 0, 0]), stop=5)
+
 # %% [markdown]
-# ### Naive $\theta$
+#  ### Naive $\theta$
+
 # %%
 sol_nonlinear = solver(pend.nonlinear_system, theta_naive)
 sol_linear = solver(pend.linear_system, pend.A, pend.b, theta_naive)
 
-fig = gen_plot(time, sol_linear, sol_nonlinear, r"Naive $\theta$")
+fig = gen_plot(
+    time, [("linear", sol_linear), ("nonlinear", sol_nonlinear)], r"Naive $\theta$"
+)
 plt.show()
+
 # %% [markdown]
-# ### Real $\theta$
+#  ### Real $\theta$
+
 # %%
 sol_nonlinear = solver(pend.nonlinear_system, theta_real)
 sol_linear = solver(pend.linear_system, pend.A, pend.b, theta_real)
 
-fig = gen_plot(time, sol_linear, sol_nonlinear, r"Real $\theta$")
+fig = gen_plot(
+    time, [("linear", sol_linear), ("nonlinear", sol_nonlinear)], r"Real $\theta$"
+)
 plt.show()
+
 # %% [markdown]
-# ### Complex $\theta$
+#  ### Complex $\theta$
+
 # %%
 sol_nonlinear = solver(pend.nonlinear_system, theta_complex)
 sol_linear = solver(pend.linear_system, pend.A, pend.b, theta_complex)
 
-fig = gen_plot(time, sol_linear, sol_nonlinear, r"Complex $\theta$")
+fig = gen_plot(
+    time, [("linear", sol_linear), ("nonlinear", sol_nonlinear)], r"Complex $\theta$"
+)
 plt.show()
+
 # %% [markdown]
-# ## Синтез наблюдателя
+#  # Синтез наблюдателя
+
 # %%
-eigs, eigs_vectors = np.linalg.eig(pend.A.T.astype(float))
-p_inverse = np.vstack((eigs_vectors[0], eigs_vectors[1], [1, 0, 0, 0], [0, 1, 0, 0]))
+O = create_control_mat(pend.A.T, pend.C.T)
 
-print(f"Rank: {np.linalg.matrix_rank(p_inverse)}")
-print(np.array_str(p_inverse, precision=3, suppress_small=True))
+print(f"O with shape {O.shape} and rank {np.linalg.matrix_rank(O)} = ")
+pprint(O)
+
 # %%
-p = np.linalg.inv(p_inverse)
-A_hat = p_inverse @ pend.A.T.astype(float) @ p
-c_hat = p_inverse @ pend.C.T
-
-print(np.array_str(A_hat, precision=3, suppress_small=True))
-
-print(np.array_str(c_hat, precision=3, suppress_small=True))
-# %%
-theta_1 = sym.Symbol("theta_1")
-theta_2 = sym.Symbol("theta_2")
-
-theta_for_L = np.array([[theta_1, theta_2, 0, 0], [theta_1, theta_2, 0, 0]])
-
-p_inverse @ (pend.A.T.astype(float) @ p - pend.C.T @ theta_for_L)
-
-# solution = sym.solve((x + 5 * y - 2, -3 * x + 6 * y - 15), (x, y))
-# %%
-C_observe = np.column_stack(
+eigvals, eigs = sp.linalg.eig(pend.A.T, right=False, left=True)
+P_inv = np.vstack(
     [
-        pend.C.T,
-        pend.A.T @ pend.C.T,
-        np.linalg.matrix_power(pend.A.T, 2) @ pend.C.T,
-        np.linalg.matrix_power(pend.A.T, 3) @ pend.C.T,
+        eigs[:, 0],
+        eigs[:, 3],
+        np.array([0, 1, 0, 0]),
+        np.array([0, 0, 1, 0]),
+    ]
+)
+P = np.linalg.inv(P_inv)
+
+print(f"Eigvals = {atos(eigvals.real)}")
+print()
+print(f"P^-1 = \n{atos(P_inv)}")
+print()
+print(f"P = \n{atos(P)}")
+
+# %%
+A_hat = P_inv @ pend.A.T @ P
+b_hat = P_inv @ pend.C.T
+
+print(f"A_hat = \n{atos(A_hat)}")
+print(f"b_hat = \n{atos(b_hat)}")
+
+# %%
+th_1 = sym.Symbol(r"theta_1")
+th_2 = sym.Symbol(r"theta_2")
+
+L_hat = np.array([[th_1, th_2, 0, 0], [th_1, th_2, 0, 0]])
+
+print(f"L_hat = ")
+pprint(L_hat)
+
+# %% [markdown]
+#  $\hat A + \hat b \hat\theta = $
+
+# %%
+eq = A_hat + b_hat @ L_hat
+pprint(eq)
+
+
+# %%
+A = np.array(
+    [
+        [eq[0][0], eq[0][1]],
+        [eq[1][0], eq[1][1]],
     ]
 )
 
-print(C_observe.astype(float))
-print(C_observe.shape)
-print(f"Rank: {np.linalg.matrix_rank(C_observe)}")
+print("A = ")
+pprint(A)
+
 # %%
-print(f"Eigs: {np.linalg.eigvals(pend.A).astype(float)}")
+theta_real_L = find_theta(A, (-8, -2), th_1, th_2)
+theta_real_L_non_asympt = find_theta(A, (-8, 0), th_1, th_2)
+theta_complex_L = find_theta(A, (complex(-1, -1), complex(-1, 1)), th_1, th_2)
 
-eigs = np.linalg.eigvals(pend.A)
-eigs = list(map(float, eigs))
 # %%
-# Перенесём СЧ 0 и 6.597 в пару вещественных -2.069 и -6.597
-L_real = -(
-    -np.array([[0, 0, 0, 1]])
-    @ np.linalg.inv(C_observe)
-    @ _create_char_pol(-2.069, -eigs[1], eigs[2], eigs[3])(pend.A.T)
-).T
+theta_hat_real = sym.Matrix(L_hat).subs(
+    [(th_1, theta_real_L[0]), (th_2, theta_real_L[1])]
+)
+theta_hat_real = np.array(theta_hat_real).astype(float)
+L_real = (theta_hat_real @ P_inv).T
 
-print(f"При переносе СЧ в пару вещественных: L =\n {L_real.astype(float)}\n")
-
-# Перенесём СЧ 0 и 6.597 в пару комплексно сопряженных чисел -1-i, -1+i
-L_im = -(
-    -np.array([[0, 0, 0, 1]])
-    @ np.linalg.inv(C_observe)
-    @ _create_char_pol(complex(-1, -1), complex(-1, 1), eigs[2], eigs[3])(pend.A.T)
-).T
-
-print(f"При переносе СЧ в пару комплексно сопряженных: L =\n {L_im.astype(float)}")
-# %% [markdown]
-# ### Перенос СЧ в действительные
 # %%
-# TODO узнать является ли верхний правый блок нулевым
+theta_hat_complex = sym.Matrix(L_hat).subs(
+    [(th_1, theta_complex_L[0]), (th_2, theta_complex_L[1])]
+)
+theta_hat_complex = np.array(theta_hat_complex).astype(complex)
+L_complex = (theta_hat_complex @ P_inv).T
 
-A_observe_real = np.block(
-    [
-        [pend.A, pend.b @ theta_real],
-        [L_real @ pend.C, pend.A - L_real @ pend.C + pend.b @ theta_real],
-    ]
-).astype(float)
-
-print(np.array_str(A_observe_real, precision=3, suppress_small=True))
 # %%
-def linear_system_observer_real(
-    t: np.ndarray,
-    x: np.ndarray,
-) -> np.ndarray:
+theta_hat_non_asympt = sym.Matrix(L_hat).subs(
+    [(th_1, theta_real_L_non_asympt[0]), (th_2, theta_real_L_non_asympt[1])]
+)
+theta_hat_non_asympt = np.array(theta_hat_non_asympt).astype(complex)
+L_real_non_asympt = (theta_hat_non_asympt @ P_inv).T
 
-    return A_observe_real @ x
+# %%
+pprint(np.linalg.eigvals(pend.A.T + pend.C.T @ L_real.T))
 
+# %%
+pprint(np.linalg.eigvals(pend.A.T + pend.C.T @ L_complex.T))
 
-start, stop = 0, 10
+# %%
+pprint(np.linalg.eigvals(pend.A.T + pend.C.T @ L_real_non_asympt.T))
 
-time = np.linspace(start, stop, 300)
-y_0 = np.array([0, 0.1, 0, 0, 1, 0.1, 1, 0])
+# %%
+solver, time = init_solve_system(np.array([0.1, 0, 0, 0, 0.7, 0, 0, 0]), stop=10)
 
-sol = integrate.solve_ivp(
-    linear_system_observer_real,
-    (start, stop),
-    y_0,
-    dense_output=True,
-    args=(),
-    method="RK45",
+# %%
+sol_observer = solver(
+    pend.system_with_observer, pend.A, pend.b, pend.C, theta_real, -L_real
 )
 
-sol = sol.sol(time)
-
-y_labels = (r"x", r"\phi", r"\dot x", r"\dot \phi")
-
-fig, axs = plt.subplots(4, 1)
-fig.set_size_inches(10, 15)
-
-for i in range(4):
-    axs[i].plot(time, sol[i], label="x")
-    axs[i].plot(time, sol[i + 4], label="ksi")
-    axs[i].set_xlabel("time")
-    axs[i].set_ylabel(y_labels[i])
-    axs[i].grid(True)
-    axs[i].legend()
-
-fig.tight_layout()
-# fig.savefig('out.png', dpi=300, facecolor='white') # uncomment to save high-res picture
+fig = gen_plot(
+    time,
+    [("State", sol_observer[:4]), ("Observer", sol_observer[4:])],
+    r"Real $\theta$, real $L$",
+)
 plt.show()
-# %% [markdown]
-# ### Перенос СЧ в комплексные
+
 # %%
-A_observe_im = np.block(
-    [
-        [pend.A, pend.b @ theta_complex],
-        [L_im @ pend.C, pend.A - L_im @ pend.C + pend.b @ theta_complex],
-    ]
-).astype(float)
-
-print(np.array_str(A_observe_im, precision=3, suppress_small=True))
-# %%
-def linear_system_observer_im(
-    t: np.ndarray,
-    x: np.ndarray,
-) -> np.ndarray:
-
-    return A_observe_im @ x
-
-
-start, stop = 0, 10
-
-time = np.linspace(start, stop, 300)
-y_0 = np.array([0, 0.1, 0, 0, 1, 0.1, 1, 0])
-
-sol = integrate.solve_ivp(
-    linear_system_observer_im,
-    (start, stop),
-    y_0,
-    dense_output=True,
-    args=(),
-    method="RK45",
+sol_observer = solver(
+    pend.system_with_observer, pend.A, pend.b, pend.C, theta_complex, -L_complex
 )
 
-sol = sol.sol(time)
+fig = gen_plot(
+    time,
+    [("State", sol_observer[:4]), ("Observer", sol_observer[4:])],
+    r"Real $\theta$, real $L$",
+)
+plt.show()
 
-y_labels = (r"x", r"\phi", r"\dot x", r"\dot \phi")
+# %%
+sol_observer = solver(
+    pend.system_with_observer, pend.A, pend.b, pend.C, theta_complex, -L_real_non_asympt
+)
 
-fig, axs = plt.subplots(4, 1)
-fig.set_size_inches(10, 15)
-
-for i in range(4):
-    axs[i].plot(time, sol[i], label="x")
-    axs[i].plot(time, sol[i + 4], label="ksi")
-    axs[i].set_xlabel("time")
-    axs[i].set_ylabel(y_labels[i])
-    axs[i].grid(True)
-    axs[i].legend()
-
-fig.tight_layout()
-# fig.savefig('out.png', dpi=300, facecolor='white') # uncomment to save high-res picture
+fig = gen_plot(
+    time,
+    [("State", sol_observer[:4]), ("Observer", sol_observer[4:])],
+    r"Real $\theta$, real $L$, non asympt",
+)
 plt.show()

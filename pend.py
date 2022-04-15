@@ -66,3 +66,20 @@ def nonlinear_system(
     res = np.vstack((np.array([[xi_dot], [phi_dot]]), y)).ravel()
 
     return res
+
+
+def system_with_observer(
+        t: np.ndarray,
+        x: np.ndarray,
+        A: np.ndarray,
+        b: np.ndarray,
+        C: np.ndarray,
+        theta: np.ndarray,
+        L: np.ndarray,
+) -> np.ndarray:
+    mat = np.block([
+        [A, b @ theta],
+        [L @ C, A + b @ theta - L @ C]
+    ])
+
+    return (mat @ x.T).T
