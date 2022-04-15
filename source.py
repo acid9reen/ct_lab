@@ -7,9 +7,8 @@ import sympy as sym
 from matplotlib import pyplot as plt
 
 import pend
-from utils import (create_control_mat, create_theta, gen_plot,
-                   init_solve_system, round_expr_fac, find_theta)
-
+from utils import (create_control_mat, create_theta, find_theta, gen_plot,
+                   init_solve_system, round_expr_fac)
 
 # %% [markdown]
 #  # Выполнение заданий
@@ -47,12 +46,18 @@ print(f"При переносе СЧ (6.597) в действительное (-6
 # перенесём 0 и 6.597 в устойчивые -2.069 и -6.597
 theta_real = create_theta(pend.A, C, -2.069, -eigs[1], eigs[2], eigs[3])
 
-print(f"При переносе СЧ (0, 6.597) в действительные (-2.069, -6.597): theta = {theta_real}")
+print(
+    f"При переносе СЧ (0, 6.597) в действительные (-2.069, -6.597): theta = {theta_real}"
+)
 
 # Перенесём СЧ 0 и 6.597 в пару комплексно сопряженных чисел -1-i, -1+i
-theta_complex = create_theta(pend.A, C, complex(-1, -1), complex(-1, 1), eigs[2], eigs[3])
+theta_complex = create_theta(
+    pend.A, C, complex(-1, -1), complex(-1, 1), eigs[2], eigs[3]
+)
 
-print(f"При переносе СЧ (0, 6.597) пару комплексно сопряженных чисел (-1-i, -1+i): theta = {theta_complex}")
+print(
+    f"При переносе СЧ (0, 6.597) пару комплексно сопряженных чисел (-1-i, -1+i): theta = {theta_complex}"
+)
 
 # %%
 print("Проверка СЧ полкченных после пременения управления:\n")
@@ -70,7 +75,9 @@ solver, time = init_solve_system(np.array([0, 0.1, 0, 0]), stop=5)
 sol_nonlinear = solver(pend.nonlinear_system, theta_naive)
 sol_linear = solver(pend.linear_system, pend.A, pend.b, theta_naive)
 
-fig = gen_plot(time, [("linear", sol_linear), ("nonlinear", sol_nonlinear)], r"Naive $\theta$")
+fig = gen_plot(
+    time, [("linear", sol_linear), ("nonlinear", sol_nonlinear)], r"Naive $\theta$"
+)
 plt.show()
 
 # %% [markdown]
@@ -80,7 +87,9 @@ plt.show()
 sol_nonlinear = solver(pend.nonlinear_system, theta_real)
 sol_linear = solver(pend.linear_system, pend.A, pend.b, theta_real)
 
-fig = gen_plot(time, [("linear", sol_linear), ("nonlinear", sol_nonlinear)], r"Real $\theta$")
+fig = gen_plot(
+    time, [("linear", sol_linear), ("nonlinear", sol_nonlinear)], r"Real $\theta$"
+)
 plt.show()
 
 # %% [markdown]
@@ -90,7 +99,9 @@ plt.show()
 sol_nonlinear = solver(pend.nonlinear_system, theta_complex)
 sol_linear = solver(pend.linear_system, pend.A, pend.b, theta_complex)
 
-fig = gen_plot(time, [("linear", sol_linear), ("nonlinear", sol_nonlinear)], r"Complex $\theta$")
+fig = gen_plot(
+    time, [("linear", sol_linear), ("nonlinear", sol_nonlinear)], r"Complex $\theta$"
+)
 plt.show()
 
 # %% [markdown]
@@ -104,12 +115,14 @@ pprint(O)
 
 # %%
 eigvals, eigs = sp.linalg.eig(pend.A.T, right=False, left=True)
-P_inv = np.vstack([
-    eigs[:, 0],
-    eigs[:, 3],
-    np.array([0, 1, 0, 0]),
-    np.array([0, 0, 1, 0]),
-])
+P_inv = np.vstack(
+    [
+        eigs[:, 0],
+        eigs[:, 3],
+        np.array([0, 1, 0, 0]),
+        np.array([0, 0, 1, 0]),
+    ]
+)
 P = np.linalg.inv(P_inv)
 
 print(f"Eigvals = {atos(eigvals.real)}")
@@ -129,10 +142,7 @@ print(f"b_hat = \n{atos(b_hat)}")
 th_1 = sym.Symbol(r"theta_1")
 th_2 = sym.Symbol(r"theta_2")
 
-L_hat = np.array([
-    [th_1, th_2, 0, 0],
-    [th_1, th_2, 0, 0]
-])
+L_hat = np.array([[th_1, th_2, 0, 0], [th_1, th_2, 0, 0]])
 
 print(f"L_hat = ")
 pprint(L_hat)
@@ -146,10 +156,12 @@ pprint(eq)
 
 
 # %%
-A = np.array([
-    [eq[0][0], eq[0][1]],
-    [eq[1][0], eq[1][1]],
-])
+A = np.array(
+    [
+        [eq[0][0], eq[0][1]],
+        [eq[1][0], eq[1][1]],
+    ]
+)
 
 print("A = ")
 pprint(A)
@@ -160,19 +172,25 @@ theta_real_L_non_asympt = find_theta(A, (-8, 0), th_1, th_2)
 theta_complex_L = find_theta(A, (complex(-1, -1), complex(-1, 1)), th_1, th_2)
 
 # %%
-theta_hat_real = sym.Matrix(L_hat).subs([(th_1, theta_real_L[0]), (th_2, theta_real_L[1])])
+theta_hat_real = sym.Matrix(L_hat).subs(
+    [(th_1, theta_real_L[0]), (th_2, theta_real_L[1])]
+)
 theta_hat_real = np.array(theta_hat_real).astype(float)
 L_real = (theta_hat_real @ P_inv).T
 
 # %%
-theta_hat_complex = sym.Matrix(L_hat).subs([(th_1, theta_complex_L[0]), (th_2, theta_complex_L[1])])
+theta_hat_complex = sym.Matrix(L_hat).subs(
+    [(th_1, theta_complex_L[0]), (th_2, theta_complex_L[1])]
+)
 theta_hat_complex = np.array(theta_hat_complex).astype(complex)
 L_complex = (theta_hat_complex @ P_inv).T
 
 # %%
-theta_hat_non_asympt = sym.Matrix(L_hat).subs([(th_1, theta_real_L_non_asympt[0]), (th_2, theta_real_L_non_asympt[1])])
+theta_hat_non_asympt = sym.Matrix(L_hat).subs(
+    [(th_1, theta_real_L_non_asympt[0]), (th_2, theta_real_L_non_asympt[1])]
+)
 theta_hat_non_asympt = np.array(theta_hat_non_asympt).astype(complex)
-L_real_non_asympt= (theta_hat_non_asympt @ P_inv).T
+L_real_non_asympt = (theta_hat_non_asympt @ P_inv).T
 
 # %%
 pprint(np.linalg.eigvals(pend.A.T + pend.C.T @ L_real.T))
@@ -187,21 +205,37 @@ pprint(np.linalg.eigvals(pend.A.T + pend.C.T @ L_real_non_asympt.T))
 solver, time = init_solve_system(np.array([0.1, 0, 0, 0, 0.7, 0, 0, 0]), stop=10)
 
 # %%
-sol_observer = solver(pend.system_with_observer, pend.A, pend.b, pend.C, theta_real, -L_real)
+sol_observer = solver(
+    pend.system_with_observer, pend.A, pend.b, pend.C, theta_real, -L_real
+)
 
-fig = gen_plot(time, [("State", sol_observer[:4]), ("Observer", sol_observer[4:])], r"Real $\theta$, real $L$")
+fig = gen_plot(
+    time,
+    [("State", sol_observer[:4]), ("Observer", sol_observer[4:])],
+    r"Real $\theta$, real $L$",
+)
 plt.show()
 
 # %%
-sol_observer = solver(pend.system_with_observer, pend.A, pend.b, pend.C, theta_complex, -L_complex)
+sol_observer = solver(
+    pend.system_with_observer, pend.A, pend.b, pend.C, theta_complex, -L_complex
+)
 
-fig = gen_plot(time, [("State", sol_observer[:4]), ("Observer", sol_observer[4:])], r"Real $\theta$, real $L$")
+fig = gen_plot(
+    time,
+    [("State", sol_observer[:4]), ("Observer", sol_observer[4:])],
+    r"Real $\theta$, real $L$",
+)
 plt.show()
 
 # %%
-sol_observer = solver(pend.system_with_observer, pend.A, pend.b, pend.C, theta_complex, -L_real_non_asympt)
+sol_observer = solver(
+    pend.system_with_observer, pend.A, pend.b, pend.C, theta_complex, -L_real_non_asympt
+)
 
-fig = gen_plot(time, [("State", sol_observer[:4]), ("Observer", sol_observer[4:])], r"Real $\theta$, real $L$, non asympt")
+fig = gen_plot(
+    time,
+    [("State", sol_observer[:4]), ("Observer", sol_observer[4:])],
+    r"Real $\theta$, real $L$, non asympt",
+)
 plt.show()
-
-
